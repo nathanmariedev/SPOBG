@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"context"
 	"fmt"
 	"github.com/chromedp/chromedp"
 	"io"
@@ -53,7 +54,7 @@ func ScrapeBackgroundImageDiv(url string) string {
 		log.Fatalf("Erreur lors de l'exécution de Chromedp : %v", err)
 	}
 
-	backgroundImageURL := extractBackgroundImageURL(styleContent)
+	backgroundImageURL := ExtractBackgroundImageURL(styleContent)
 	if backgroundImageURL != "" {
 		return backgroundImageURL
 	} else {
