@@ -70,7 +70,12 @@ func DownloadImage(url, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("erreur lors du téléchargement de l'image: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 
 	// Vérifier que la requête est réussie
 	if resp.StatusCode != 200 {
@@ -82,7 +87,12 @@ func DownloadImage(url, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("erreur lors de la création du fichier: %v", err)
 	}
-	defer out.Close()
+	defer func(out *os.File) {
+		err := out.Close()
+		if err != nil {
+
+		}
+	}(out)
 
 	// Copier le contenu téléchargé dans le fichier
 	_, err = io.Copy(out, resp.Body)

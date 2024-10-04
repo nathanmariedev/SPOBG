@@ -5,24 +5,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 )
 
 const refreshTokenFile = "refresh_token.json"
-const CLIENT_ID = "81a807a412c14e34bf6dbd81633c4ef6"
-const CLIENT_SECRET = "0d68154389b24ce4aea35541e6cfbdd4"
-const SPO_API = "https://api.spotify.com/v1/"
-const SPO_AUTH = "https://accounts.spotify.com/api/token"
-const SPO_AUTH_CMD = `
-	curl -X POST "https://accounts.spotify.com/api/token" \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "grant_type=client_credentials&client_id=81a807a412c14e34bf6dbd81633c4ef6&client_secret=0d68154389b24ce4aea35541e6cfbdd4&code=AQBbpm3eDdFRK1MHpNpNZUIEbmxd12ItmdpTPyHd6l6Vddx95zIignOfKLpCHYG4fboByg9pMZEzG0q6WPZFmzzplzZ_Rnyl8_zGUmsasw01CpXCCcVxe6bmtTxcVlf8G6KwQSGIwarZrM--rblc4ytRw2imJIi21f-99tm3w7KcBjD1cIBNJtek6VPR2YNImrz2pHZl2W-zlUcL"
+const clientId = "81a807a412c14e34bf6dbd81633c4ef6"
+const clientSecret = "0d68154389b24ce4aea35541e6cfbdd4"
+const spotifyApi = "https://api.spotify.com/v1/"
+const spotifyAuthentification = "https://accounts.spotify.com/api/token"
 
-`
-
-var serverStarted bool = false
+var serverStarted = false
 
 func storeRefreshToken(refreshToken string) error {
 	tokenData := map[string]string{"refresh_token": refreshToken}
@@ -30,7 +25,12 @@ func storeRefreshToken(refreshToken string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	return json.NewEncoder(file).Encode(tokenData)
 }
@@ -39,7 +39,12 @@ func loadRefreshToken() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	var tokenData map[string]string
 	err = json.NewDecoder(file).Decode(&tokenData)
@@ -53,9 +58,9 @@ func loadRefreshToken() (string, error) {
 func GetAccessToken(code string) (string, error) {
 	data := map[string]string{
 		"grant_type":    "authorization_code",
-		"client_id":     CLIENT_ID,
+		"client_id":     clientId,
 		"code":          code,
-		"client_secret": CLIENT_SECRET,
+		"client_secret": clientSecret,
 		"redirect_uri":  "http://localhost:8080/callback",
 	}
 
@@ -63,7 +68,7 @@ func GetAccessToken(code string) (string, error) {
 		"Content-Type": "application/x-www-form-urlencoded",
 	}
 
-	response, err := http_client.PostRequest(SPO_AUTH, data, headers)
+	response, err := http_client.PostRequest(spotifyAuthentification, data, headers)
 	if err != nil {
 		return "", fmt.Errorf("erreur lors de la requête POST: %v", err)
 	}
@@ -99,8 +104,8 @@ func GetAccessTokenFromRefreshToken() (string, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
-	data.Set("client_id", CLIENT_ID)
-	data.Set("client_secret", CLIENT_SECRET)
+	data.Set("client_id", clientId)
+	data.Set("client_secret", clientSecret)
 
 	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", bytes.NewBufferString(data.Encode()))
 	if err != nil {
@@ -113,7 +118,12 @@ func GetAccessTokenFromRefreshToken() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
@@ -132,7 +142,7 @@ func ConnectSpotifyAccount() (string, error) {
 	codeChan := make(chan string)
 
 	// URL pour autoriser l'utilisateur
-	authURL := fmt.Sprintf("https://accounts.spotify.com/authorize?client_id=%s&response_type=code&redirect_uri=%s&scope=user-read-playback-state", CLIENT_ID, "http://localhost:8080/callback")
+	authURL := fmt.Sprintf("https://accounts.spotify.com/authorize?client_id=%s&response_type=code&redirect_uri=%s&scope=user-read-playback-state", clientId, "http://localhost:8080/callback")
 	fmt.Println("Visitez cette URL pour autoriser l'application :", authURL)
 
 	// Enregistrer le gestionnaire du callback UNE SEULE FOIS
@@ -146,7 +156,10 @@ func ConnectSpotifyAccount() (string, error) {
 
 			// Envoyer le code dans le canal
 			codeChan <- code
-			w.Write([]byte("Compte connecté avec succès !"))
+			_, err := w.Write([]byte("Compte connecté avec succès !"))
+			if err != nil {
+				return
+			}
 		})
 
 		// Démarrer le serveur HTTP UNE SEULE FOIS
@@ -172,7 +185,7 @@ func GetCurrentlyPlayedSong(token string) (map[string]interface{}, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,
 	}
-	response, code, err := http_client.GetRequest(SPO_API+"me/player/currently-playing", headers)
+	response, code, err := http_client.GetRequest(spotifyApi+"me/player/currently-playing", headers)
 
 	if err != nil {
 		return nil, fmt.Errorf("erreur lors de la requête GET: %v", err)
@@ -225,7 +238,7 @@ func GetArtistIdFromCurrent(currentSong map[string]interface{}) (string, error) 
 }
 func GetArtistDetails(artistID string, accessToken string) (map[string]interface{}, error) {
 	// Construire l'URL pour obtenir les informations de l'artiste
-	url := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", artistID)
+	artistUrl := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", artistID)
 
 	// Ajouter le token d'accès dans l'en-tête Authorization
 	headers := map[string]string{
@@ -233,7 +246,7 @@ func GetArtistDetails(artistID string, accessToken string) (map[string]interface
 	}
 
 	// Envoyer la requête GET pour obtenir les détails de l'artiste
-	response, _, err := http_client.GetRequest(url, headers)
+	response, _, err := http_client.GetRequest(artistUrl, headers)
 	if err != nil {
 		return nil, fmt.Errorf("erreur lors de la requête GET pour l'artiste: %v", err)
 	}

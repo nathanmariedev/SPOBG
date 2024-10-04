@@ -1,6 +1,7 @@
 package macos_utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -44,7 +45,7 @@ func FileExistsInDirectory(directory string, filename string) (bool, error) {
 		}
 		return nil
 	})
-	if err != nil && err != filepath.SkipDir {
+	if err != nil && !errors.Is(err, filepath.SkipDir) {
 		return false, err
 	}
 	return found, nil

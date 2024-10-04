@@ -2,14 +2,9 @@ package main
 
 import (
 	"SPOBG/browser"
-	macos_utils "SPOBG/macos-utils"
+	macosUtils "SPOBG/macos-utils"
 	"SPOBG/spoAPI"
 	"fmt"
-)
-
-const (
-	CLIENT_ID     = "81a807a412c14e34bf6dbd81633c4ef6"
-	CLIENT_SECRET = "0d68154389b24ce4aea35541e6cfbdd4"
 )
 
 func main() {
@@ -51,14 +46,14 @@ func main() {
 
 	id, _ := spoAPI.GetArtistIdFromCurrent(song)
 
-	exists, err := macos_utils.FileExistsInDirectory("/Users/nathan/Documents/WORK/SPOBG/images/", id+".jpeg")
+	exists, err := macosUtils.FileExistsInDirectory("/Users/nathan/Documents/WORK/SPOBG/images/", id+".jpeg")
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	if exists {
 		fmt.Println("EXISTS")
-		err = macos_utils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
+		err = macosUtils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
 		return
 	}
 
@@ -66,11 +61,14 @@ func main() {
 
 	img := browser.ScrapeBackgroundImageDiv(url)
 
-	browser.DownloadImage(img, "images/"+id+".jpeg")
+	err = browser.DownloadImage(img, "images/"+id+".jpeg")
+	if err != nil {
+		return
+	}
 	fmt.Println("DOWNLOADING")
 
 	// Changer le fond d'écran sur macOS
-	err = macos_utils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
+	err = macosUtils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
 	if err != nil {
 		fmt.Printf("Erreur lors du changement du fond d'écran: %v\n", err)
 		return
