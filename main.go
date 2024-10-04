@@ -8,19 +8,20 @@ import (
 )
 
 func main() {
+	// Récupération d'un accessToken grâce au refreshToken
 	accessToken, err := spoAPI.GetAccessTokenFromRefreshToken()
 	if err != nil {
-		// Si le refresh token échoue, l'utilisateur doit se reconnecter
+		// Si le refreshToken ne fonctionne pas, demander la reconnection
 		fmt.Println("Échec de la récupération du token d'accès. Veuillez vous reconnecter.")
 
-		// Si l'utilisateur doit se reconnecter, on utilise ConnectSpotifyAccount pour obtenir un nouveau code
 		code, err := spoAPI.ConnectSpotifyAccount()
+
 		if err != nil {
 			fmt.Println("Erreur lors de la connexion à Spotify :", err)
 			return
 		}
 
-		// Échanger le code contre un token d'accès et un refresh token
+		// Échange du code contre un accessToken et un refreshToken
 		accessToken, err = spoAPI.GetAccessToken(code)
 		if err != nil {
 			fmt.Println("Erreur lors de la récupération du token d'accès :", err)
@@ -28,13 +29,14 @@ func main() {
 		}
 	}
 
-	// Utiliser le token d'accès pour récupérer la chanson actuellement en lecture
+	// Récupération du morceau joué
 	song, err := spoAPI.GetCurrentlyPlayedSong(accessToken)
 	if err != nil {
 		fmt.Println("Erreur lors de la récupération de la chanson en cours :", err)
 	}
+
+	// Exploitation de la réponse
 	if item, ok := song["item"].(map[string]interface{}); ok {
-		// Access the "name" field inside "item"
 		if name, ok := item["name"].(string); ok {
 			fmt.Println("Song Name:", name)
 		} else {
@@ -44,8 +46,10 @@ func main() {
 		fmt.Println("Item not found or is not a map")
 	}
 
+	// Récupération de l'id de l'artiste
 	id, _ := spoAPI.GetArtistIdFromCurrent(song)
 
+	// On vérifie si l'image est déja en local
 	exists, err := macosUtils.FileExistsInDirectory("/Users/nathan/Documents/WORK/SPOBG/images/", id+".jpeg")
 	if err != nil {
 		fmt.Println(err)
@@ -54,7 +58,7 @@ func main() {
 	if exists {
 		fmt.Println("EXISTS")
 		err = macosUtils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
-		return
+		return // FIN DU PROGRAMME
 	}
 
 	url := "https://open.spotify.com/intl-pt/artist/" + id
@@ -71,6 +75,6 @@ func main() {
 	err = macosUtils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
 	if err != nil {
 		fmt.Printf("Erreur lors du changement du fond d'écran: %v\n", err)
-		return
+		return // FIN DU PROGRAMME
 	}
 }
