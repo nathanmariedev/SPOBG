@@ -1,6 +1,8 @@
 package main
 
 import (
+	"SPOBG/browser"
+	macos_utils "SPOBG/macos-utils"
 	"SPOBG/spoAPI"
 	"fmt"
 )
@@ -49,26 +51,26 @@ func main() {
 
 	id, _ := spoAPI.GetArtistIdFromCurrent(song)
 
-	exists, err := spoAPI.FileExistsInDirectory("/Users/nathan/Documents/WORK/SPOBG/images/", id+".jpeg")
+	exists, err := macos_utils.FileExistsInDirectory("/Users/nathan/Documents/WORK/SPOBG/images/", id+".jpeg")
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	if exists {
 		fmt.Println("EXISTS")
-		err = spoAPI.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
+		err = macos_utils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
 		return
 	}
 
 	url := "https://open.spotify.com/intl-pt/artist/" + id
 
-	img := spoAPI.ScrapeBackgroundImageDiv(url)
+	img := browser.ScrapeBackgroundImageDiv(url)
 
-	spoAPI.DownloadImage(img, "images/"+id+".jpeg")
+	browser.DownloadImage(img, "images/"+id+".jpeg")
 	fmt.Println("DOWNLOADING")
 
 	// Changer le fond d'écran sur macOS
-	err = spoAPI.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
+	err = macos_utils.SetWallpaperMacOS("/Users/nathan/Documents/WORK/SPOBG/images/" + id + ".jpeg")
 	if err != nil {
 		fmt.Printf("Erreur lors du changement du fond d'écran: %v\n", err)
 		return
