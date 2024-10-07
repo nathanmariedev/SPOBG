@@ -6,12 +6,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func SetWallpaperMacOS(filepath string) error {
-	// Vérifier si l'image existe
 	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		return fmt.Errorf("le fichier d'image n'existe pas: %s", filepath)
+		fmt.Println("le fichier d'image n'existe pas: %s", filepath)
+		return err
 	}
 	// Définir le chemin vers le fichier .plist
 	//plistPath := "/Users/nathan/Library/Application Support/com.apple.wallpaper/Store/Index.plist"
@@ -29,6 +30,18 @@ func SetWallpaperMacOS(filepath string) error {
 	}
 	fmt.Println("CHANGED")
 	return nil
+}
+
+func GetWallpaperMacOS() string {
+	script := `tell app "finder" to get posix path of (get desktop picture as alias)`
+	cmd := exec.Command("osascript", "-e", script)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Erreur : %s\n", err)
+	}
+	output = []byte(filepath.Base(string(output)))
+	fmt.Println(string(output))
+	return strings.ReplaceAll(string(output), "\n", "")
 }
 
 func FileExistsInDirectory(directory string, filename string) (bool, error) {

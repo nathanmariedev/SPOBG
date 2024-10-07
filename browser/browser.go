@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/chromedp/chromedp"
 	"io"
@@ -22,7 +23,7 @@ func ExtractBackgroundImageURL(styleContent string) string {
 	}
 	return ""
 }
-func ScrapeBackgroundImageDiv(url string) string {
+func ScrapeBackgroundImageDiv(url string) (string, error) {
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
@@ -31,22 +32,32 @@ func ScrapeBackgroundImageDiv(url string) string {
 	defer cancel()
 
 	var styleContent string
+	var childCount int
 
 	// Exécuter les actions de scraping avec des étapes séparées
 	err := chromedp.Run(ctx,
 		// Naviguer vers l'URL spécifiée
 		chromedp.Navigate(url),
-
-		// Attendre que l'élément principal de la page soit prêt
 		chromedp.WaitReady(`body`, chromedp.ByQuery),
-
-		// Attendre que l'élément avec la classe "under-main-view" soit visible
 		chromedp.WaitVisible(`.under-main-view`, chromedp.ByQuery),
-
-		// Ajouter un délai pour garantir le chargement du style
+		chromedp.Evaluate(`document.querySelector('.under-main-view').children.length`, &childCount),
 		chromedp.Sleep(1*time.Second),
+	)
 
-		// Récupérer l'attribut "style" de l'élément avec `data-testid="background-image"`
+	if err != nil {
+		log.Fatalf("Erreur lors de l'exécution de Chromedp : %v", err)
+	}
+
+	if childCount == 0 {
+		fmt.Println("ERROR IMAGE")
+		return "", errors.New("No image found")
+	}
+
+	err = chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.WaitReady(`body`, chromedp.ByQuery),
+		chromedp.WaitVisible(`.under-main-view`, chromedp.ByQuery),
+		chromedp.Sleep(1*time.Second),
 		chromedp.AttributeValue(`[data-testid="background-image"]`, "style", &styleContent, nil),
 	)
 
@@ -56,12 +67,12 @@ func ScrapeBackgroundImageDiv(url string) string {
 
 	backgroundImageURL := ExtractBackgroundImageURL(styleContent)
 	if backgroundImageURL != "" {
-		return backgroundImageURL
+		return backgroundImageURL, nil
 	} else {
 		fmt.Println("Aucune URL trouvée dans le style.")
 	}
 
-	return ""
+	return "", errors.New("Something wrong append...")
 }
 
 func DownloadImage(url, filepath string) error {
